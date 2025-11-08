@@ -31,3 +31,24 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Build and IDE
+.idea/
+.vscode/
+*.iml
+*.class
+
+# Maven wrapper
+.mvn/
+!/.mvn/wrapper/maven-wrapper.jar
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+
