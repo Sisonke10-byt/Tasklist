@@ -1,9 +1,7 @@
 package com.example.tasklist.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
+import java.time.LocalDate;
 
 @Entity
 public class Task {
@@ -16,14 +14,15 @@ public class Task {
     private String description;
     private boolean completed;
 
-    // Constructors
-    public Task() {
-    }
+    private LocalDate duedate; // ← new field
 
-    public Task(String title, String description, boolean completed) {
+    public Task() {}
+
+    public Task(String title, String description, boolean completed, LocalDate duedate) {
         this.title = title;
         this.description = description;
         this.completed = completed;
+        this.duedate = duedate;
     }
 
     // Getters and Setters
@@ -38,4 +37,7 @@ public class Task {
 
     public boolean isCompleted() { return completed; }
     public void setCompleted(boolean completed) { this.completed = completed; }
+
+    public LocalDate getDuedate() { return duedate; }
+    public void setDuedate(LocalDate duedate) { this.duedate = duedate; }
 }
