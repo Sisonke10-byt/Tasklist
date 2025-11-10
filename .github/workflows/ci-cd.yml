@@ -84,14 +84,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install ansible==8.8.0 docker
           ansible-galaxy collection install community.docker || true
-
+    
       - name: Create dynamic inventory file
         run: |
           mkdir -p ansible
-          cat > ansible/inventory <<INVENT
-[appservers]
-${{ secrets.ANSIBLE_HOST }} ansible_user=${{ secrets.ANSIBLE_SSH_USER }} ansible_port=${{ secrets.ANSIBLE_SSH_PORT }}
-INVENT
+          echo "[appservers]" > ansible/inventory
+          echo "${{ secrets.ANSIBLE_HOST }} ansible_user=${{ secrets.ANSIBLE_SSH_USER }} ansible_port=${{ secrets.ANSIBLE_SSH_PORT }}" >> ansible/inventory
+
 
       - name: Run Ansible playbook
         env:
