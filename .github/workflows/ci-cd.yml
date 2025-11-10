@@ -31,6 +31,9 @@ jobs:
           restore-keys: |
             maven-
 
+      - name: Make mvnw executable
+        run: chmod +x ./mvnw
+
       - name: Build & run tests
         run: ./mvnw -B clean test
 
@@ -84,13 +87,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install ansible==8.8.0 docker
           ansible-galaxy collection install community.docker || true
-    
+
       - name: Create dynamic inventory file
         run: |
           mkdir -p ansible
           echo "[appservers]" > ansible/inventory
           echo "${{ secrets.ANSIBLE_HOST }} ansible_user=${{ secrets.ANSIBLE_SSH_USER }} ansible_port=${{ secrets.ANSIBLE_SSH_PORT }}" >> ansible/inventory
-
 
       - name: Run Ansible playbook
         env:
@@ -98,4 +100,5 @@ jobs:
           IMAGE_NAME: ${{ secrets.IMAGE_NAME }}
           IMAGE_TAG: ${{ needs.build-test-and-image.outputs.image-tag }}
         run: |
-          ansible-playbook -i ansible/inventory ansible/deploy.yml \            --extra-vars "registry=${REGISTRY} image_name=${IMAGE_NAME} image_tag=${IMAGE_TAG}"
+          ansible-playbook -i ansible/inventory ansible/deploy.yml \
+            --extra-vars "registry=${REGISTRY} image_name=${IMAGE_NAME} image_tag=${IMAGE_TAG}"
