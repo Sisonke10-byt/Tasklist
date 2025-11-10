@@ -1,4 +1,3 @@
-cat > .github/workflows/ci-cd.yml <<'EOF'
 name: CI/CD Build Test & Deploy
 
 on:
@@ -100,6 +99,4 @@ INVENT
           IMAGE_NAME: ${{ secrets.IMAGE_NAME }}
           IMAGE_TAG: ${{ needs.build-test-and-image.outputs.image-tag }}
         run: |
-          ansible-playbook -i ansible/inventory ansible/deploy.yml \
-            --extra-vars "registry=${REGISTRY} image_name=${IMAGE_NAME} image_tag=${IMAGE_TAG}"
-EOF
+          ansible-playbook -i ansible/inventory ansible/deploy.yml \            --extra-vars "registry=${REGISTRY} image_name=${IMAGE_NAME} image_tag=${IMAGE_TAG}"
