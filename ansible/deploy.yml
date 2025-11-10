@@ -1,0 +1,47 @@
+cat > ansible/deploy.yml <<'EOF'
+---
+- name: Deploy Tasklist App on remote VM
+  hosts: appservers
+  become: yes
+  vars:
+    registry: "{{ registry | default('docker.io') }}"
+    image_name: "{{ image_name }}"
+    image_tag: "{{ image_tag | default('latest') }}"
+    container_name: tasklist-app
+    db_host: tasklist-db
+    db_name: taskdb
+    db_user: taskuser
+    db_pass: taskpass
+  tasks:
+    - name: Ensure docker python package is available
+      ansible.builtin.pip:
+        name: docker
+        state: present
+
+    - name: Pull the Docker image
+      community.docker.docker_image:
+        name: "{{ registry }}/{{ image_name }}"
+        tag: "{{ image_tag }}"
+        source: pull
+
+    - name: Stop and remove current container
+      community.docker.docker_container:
+        name: "{{ container_name }}"
+        state: absent
+        force_kill: yes
+
+    - name: Run new container
+      community.docker.docker_container:
+        name: "{{ container_name }}"
+        image: "{{ registry }}/{{ image_name }}:{{ image_tag }}"
+        state: started
+        restart_policy: always
+        published_ports:
+          - "8080:8080"
+        env:
+          SPRING_DATASOURCE_URL: "jdbc:postgresql://{{ db_host }}:5432/{{ db_name }}"
+          SPRING_DATASOURCE_USERNAME: "{{ db_user }}"
+          SPRING_DATASOURCE_PASSWORD: "{{ db_pass }}"
+EOF
+
+
