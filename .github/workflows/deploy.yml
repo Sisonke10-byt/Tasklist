@@ -1,0 +1,41 @@
+name: CD - Deploy to VM
+
+on:
+  workflow_dispatch:
+  # optionally run after CI build is complete
+  # workflow_run:
+  #   workflows: ["CI - Build, Test & Run"]
+  #   types:
+  #     - completed
+
+jobs:
+  deploy-vm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start ssh-agent and add private key
+        uses: webfactory/ssh-agent@v0.8.1
+        with:
+          ssh-private-key: ${{ secrets.ANSIBLE_SSH_PRIVATE_KEY }}
+
+      - name: Install Python, Ansible, Docker SDK
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible==8.8.0 docker
+          ansible-galaxy collection install community.docker || true
+
+      - name: Create dynamic inventory file
+        run: |
+          mkdir -p ansible
+          echo "[appservers]" > ansible/inventory
+          echo "${{ secrets.ANSIBLE_HOST }} ansible_user=${{ secrets.ANSIBLE_SSH_USER }} ansible_port=${{ secrets.ANSIBLE_SSH_PORT }}" >> ansible/inventory
+
+      - name: Run Ansible playbook
+        env:
+          REGISTRY: ${{ secrets.REGISTRY }}
+          IMAGE_NAME: ${{ secrets.IMAGE_NAME }}
+          IMAGE_TAG: ${{ secrets.IMAGE_TAG }}
+        run: |
+          ansible-playbook -i ansible/inventory ansible/deploy.yml \
+            --extra-vars "registry=${REGISTRY} image_name=${IMAGE_NAME} image_tag=${IMAGE_TAG}"
