@@ -7,7 +7,7 @@ on:
 
 env:
   REGISTRY: docker.io  # Docker Hub registry
-  IMAGE_NAME: ${{ secrets.IMAGE_NAME }
+  IMAGE_NAME: ${{ secrets.IMAGE_NAME }}
 
 jobs:
   build-test-and-image:
