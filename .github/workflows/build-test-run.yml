@@ -13,12 +13,12 @@ jobs:
   build-test-and-image:
     runs-on: ubuntu-latest
 
-    # Start PostgreSQL for CI testing
+    # Use GitHub Actions service for Postgres
     services:
       postgres:
         image: postgres:17
         env:
-          POSTGRES_DB: taskuser
+          POSTGRES_DB: taskdb
           POSTGRES_USER: taskuser
           POSTGRES_PASSWORD: taskpass
         ports:
@@ -74,33 +74,35 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # Build image
+      # Build Docker image
       - name: Build Docker image
         run: |
           docker build -t ${{ env.REGISTRY }}/sisonke10/${{ env.IMAGE_NAME }}:${{ steps.set-tag.outputs.image_tag }} .
           docker tag ${{ env.REGISTRY }}/sisonke10/${{ env.IMAGE_NAME }}:${{ steps.set-tag.outputs.image_tag }} ${{ env.REGISTRY }}/sisonke10/${{ env.IMAGE_NAME }}:latest
 
-      # Push to Docker Hub
+      # Push Docker images
       - name: Push Docker images
         run: |
           docker push ${{ env.REGISTRY }}/sisonke10/${{ env.IMAGE_NAME }}:${{ steps.set-tag.outputs.image_tag }}
           docker push ${{ env.REGISTRY }}/sisonke10/${{ env.IMAGE_NAME }}:latest
 
-      # Run smoke test
-      - name: Run container (smoke test)
+      # Run Tasklist app container for smoke test
+      - name: Run Tasklist container (smoke test)
         run: |
-          docker stop ci-smoke || true
-          docker rm ci-smoke || true
-
+          docker rm -f ci-smoke || true
           docker run -d --name ci-smoke \
-            -e SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/taskuser \
+            -e SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/taskdb \
             -e SPRING_DATASOURCE_USERNAME=taskuser \
             -e SPRING_DATASOURCE_PASSWORD=taskpass \
             -p 8081:8080 \
             ${{ env.REGISTRY }}/sisonke10/${{ env.IMAGE_NAME }}:latest
 
-          echo "Waiting 15 seconds for app to start..."
+      - name: Wait for Tasklist app to start
+        run: |
+          echo "Waiting 15 seconds for Tasklist app to start..."
           sleep 15
 
+      - name: Test Tasklist endpoint
+        run: |
           echo "Testing endpoint..."
           curl -f http://localhost:8081/ || (docker logs ci-smoke && exit 1)
