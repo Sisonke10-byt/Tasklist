@@ -18,7 +18,7 @@ jobs:
       postgres:
         image: postgres:17
         env:
-          POSTGRES_DB: taskdb
+          POSTGRES_DB: taskuser
           POSTGRES_USER: taskuser
           POSTGRES_PASSWORD: taskpass
         ports:
@@ -93,7 +93,7 @@ jobs:
           docker rm ci-smoke || true
 
           docker run -d --name ci-smoke \
-            -e SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/taskdb \
+            -e SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/taskuser \
             -e SPRING_DATASOURCE_USERNAME=taskuser \
             -e SPRING_DATASOURCE_PASSWORD=taskpass \
             -p 8081:8080 \
