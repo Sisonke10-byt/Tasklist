@@ -7,7 +7,10 @@ on:
 
 env:
   REGISTRY: docker.io
-  IMAGE_NAME: ${{ secrets.IMAGE_NAME }}
+  IMAGE_NAME: tasklist-app
+  POSTGRES_USER: taskuser
+  POSTGRES_PASSWORD: taskpass
+  POSTGRES_DB: taskdb
 
 jobs:
   build-test-deploy:
@@ -32,10 +35,15 @@ jobs:
     - name: Build with Maven
       run: mvn clean package -DskipTests
 
+    - name: Create Docker network
+      run: |
+        docker network create tasklist-net || true
+
     - name: Start Postgres
       run: |
         docker run -d \
           --name tasklist-db \
+          --network tasklist-net \
           -e POSTGRES_USER=$POSTGRES_USER \
           -e POSTGRES_PASSWORD=$POSTGRES_PASSWORD \
           -e POSTGRES_DB=$POSTGRES_DB \
@@ -45,15 +53,24 @@ jobs:
     - name: Wait for Postgres
       run: |
         for i in {1..20}; do
-          pg_isready -h localhost -p 5432 -U $POSTGRES_USER && break
+          docker exec tasklist-db pg_isready -U $POSTGRES_USER && break
           echo "Waiting for Postgres..."
           sleep 3
         done
 
+    - name: Build Spring Boot app Docker image
+      run: docker build -t $IMAGE_NAME .
+
     - name: Start Spring Boot app
       run: |
-        docker build -t $IMAGE_NAME .
-        docker run -d --name tasklist-app -p 8080:8080 $IMAGE_NAME
+        docker run -d \
+          --name tasklist-app \
+          --network tasklist-net \
+          -p 8080:8080 \
+          -e SPRING_DATASOURCE_URL=jdbc:postgresql://tasklist-db:5432/$POSTGRES_DB \
+          -e SPRING_DATASOURCE_USERNAME=$POSTGRES_USER \
+          -e SPRING_DATASOURCE_PASSWORD=$POSTGRES_PASSWORD \
+          $IMAGE_NAME
 
     - name: Wait for app
       run: |
