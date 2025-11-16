@@ -105,4 +105,4 @@ jobs:
       - name: Test Tasklist endpoint
         run: |
           echo "Testing endpoint..."
-          curl -f http://localhost:8081/ || (docker logs ci-smoke && exit 1)
+          curl -f http://localhost:8080/ || (docker logs ci-smoke && exit 1)
