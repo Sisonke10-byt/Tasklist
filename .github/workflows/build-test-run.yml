@@ -36,7 +36,8 @@ jobs:
       run: mvn clean package -DskipTests
 
     - name: Create Docker network
-      run: docker network create tasklist-net || true
+      run: |
+        docker network create tasklist-net || true
 
     - name: Start Postgres
       run: |
@@ -75,7 +76,7 @@ jobs:
     - name: Wait for app
       run: |
         for i in {1..20}; do
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/actuator/health || echo "000")
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/ || echo "000")
           if [[ "$STATUS" == "200" ]]; then
             echo "App is up!"
             break
@@ -86,7 +87,7 @@ jobs:
 
     - name: Run Smoke Test
       run: |
-        if ! curl -f http://localhost:8080/actuator/health; then
+        if ! curl -f http://localhost:8080/; then
           echo "App not responding!"
           docker logs tasklist-app
           exit 1
