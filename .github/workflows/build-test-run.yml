@@ -87,20 +87,22 @@ jobs:
           docker push ${{ env.REGISTRY }}/sisonke10/${{ env.IMAGE_NAME }}:latest
 
       # Run Tasklist app container for smoke test
+            # Run Tasklist app container for smoke test
       - name: Run Tasklist container (smoke test)
         run: |
           docker rm -f ci-smoke || true
           docker run -d --name ci-smoke \
-            -e SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/taskdb \
+            -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/taskdb \
             -e SPRING_DATASOURCE_USERNAME=taskuser \
             -e SPRING_DATASOURCE_PASSWORD=taskpass \
-            -p 8081:8080 \
+            --network host \
+            -p 8080:8080 \
             ${{ env.REGISTRY }}/sisonke10/${{ env.IMAGE_NAME }}:latest
 
       - name: Wait for Tasklist app to start
         run: |
-          echo "Waiting 15 seconds for Tasklist app to start..."
-          sleep 15
+          echo "Waiting 20 seconds for Tasklist app to start..."
+          sleep 20
 
       - name: Test Tasklist endpoint
         run: |
