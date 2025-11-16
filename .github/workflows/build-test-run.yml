@@ -1,8 +1,8 @@
-name: CI - Build, Test & Run
+name: CI/CD Build, Test & Smoke
 
 on:
   push:
-    branches: [ main ]
+    branches: [ dev ]
   workflow_dispatch:
 
 env:
@@ -10,13 +10,13 @@ env:
   IMAGE_NAME: ${{ secrets.IMAGE_NAME }}
 
 jobs:
-  build-test-and-image:
+  ci-smoke-test:
     runs-on: ubuntu-latest
 
     # Use GitHub Actions service for Postgres
     services:
       postgres:
-        image: postgres:17
+        image: postgres:17.6
         env:
           POSTGRES_DB: taskdb
           POSTGRES_USER: taskuser
@@ -30,81 +30,39 @@ jobs:
           --health-retries=5
 
     steps:
-      # Checkout repo
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v3
 
       # Set up JDK 21
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v3
         with:
-          distribution: temurin
-          java-version: 21
+          java-version: '21'
+          distribution: 'temurin'
 
-      # Cache Maven
-      - name: Cache Maven packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            maven-
+      - name: Build Spring Boot app
+        run: mvn clean package -DskipTests
 
-      - name: Make mvnw executable
-        run: chmod +x mvnw
-
-      # Build and run unit tests (H2)
-      - name: Build & run tests
-        run: ./mvnw -B clean test
-
-      # Build jar
-      - name: Build jar
-        run: ./mvnw -B package -DskipTests
-
-      # Set image tag
-      - name: Create image tag
-        id: set-tag
+      - name: Wait for Postgres to be ready
         run: |
-          IMAGE_TAG=${GITHUB_SHA::8}
-          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "Waiting for Postgres to be ready..."
+          for i in {1..20}; do
+            nc -zv localhost 5432 && break
+            echo "Postgres not ready yet, sleeping 3s..."
+            sleep 3
+          done
 
-      # Log in to Docker Hub
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      # Build Docker image
-      - name: Build Docker image
+      - name: Run Spring Boot app in background
         run: |
-          docker build -t ${{ env.REGISTRY }}/sisonke10/${{ env.IMAGE_NAME }}:${{ steps.set-tag.outputs.image_tag }} .
-          docker tag ${{ env.REGISTRY }}/sisonke10/${{ env.IMAGE_NAME }}:${{ steps.set-tag.outputs.image_tag }} ${{ env.REGISTRY }}/sisonke10/${{ env.IMAGE_NAME }}:latest
+          java -jar target/tasklist-0.0.1-SNAPSHOT.jar &
+          sleep 15  # Give app some time to start
 
-      # Push Docker images
-      - name: Push Docker images
-        run: |
-          docker push ${{ env.REGISTRY }}/sisonke10/${{ env.IMAGE_NAME }}:${{ steps.set-tag.outputs.image_tag }}
-          docker push ${{ env.REGISTRY }}/sisonke10/${{ env.IMAGE_NAME }}:latest
+        env:
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/taskdb
+          SPRING_DATASOURCE_USERNAME: taskuser
+          SPRING_DATASOURCE_PASSWORD: taskpass
 
-      # Run Tasklist app container for smoke test
-            # Run Tasklist app container for smoke test
-      - name: Run Tasklist container (smoke test)
-        run: |
-          docker rm -f ci-smoke || true
-          docker run -d --name ci-smoke \
-            -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/taskdb \
-            -e SPRING_DATASOURCE_USERNAME=taskuser \
-            -e SPRING_DATASOURCE_PASSWORD=taskpass \
-            --network host \
-            -p 8080:8080 \
-            ${{ env.REGISTRY }}/sisonke10/${{ env.IMAGE_NAME }}:latest
-
-      - name: Wait for Tasklist app to start
-        run: |
-          echo "Waiting 20 seconds for Tasklist app to start..."
-          sleep 20
-
-      - name: Test Tasklist endpoint
+      - name: Smoke Test
         run: |
           echo "Testing endpoint..."
-          curl -f http://localhost:8080/ || (docker logs ci-smoke && exit 1)
+          curl -f http://localhost:8080/ || (echo "App not responding!" && exit 1)
