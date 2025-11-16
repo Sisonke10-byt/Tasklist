@@ -67,9 +67,9 @@ jobs:
           --name tasklist-app \
           --network tasklist-net \
           -p 8080:8080 \
-          -e SPRING_DATASOURCE_URL=jdbc:postgresql://tasklist-db:5432/$POSTGRES_DB \
-          -e SPRING_DATASOURCE_USERNAME=$POSTGRES_USER \
-          -e SPRING_DATASOURCE_PASSWORD=$POSTGRES_PASSWORD \
+          -e SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/taskdb \
+          -e SPRING_DATASOURCE_USERNAME=taskuser \
+          -e SPRING_DATASOURCE_PASSWORD=taskpass \
           $IMAGE_NAME
 
     - name: Wait for app
