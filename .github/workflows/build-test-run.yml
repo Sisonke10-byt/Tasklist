@@ -58,25 +58,24 @@ jobs:
           sleep 3
         done
 
-    - name: Build Spring Boot app Docker image
+    - name: Build Spring Boot app image
       run: docker build -t $IMAGE_NAME .
 
     - name: Start Spring Boot app
-  run: |
-    docker run -d \
-      --name tasklist-app \
-      --network tasklist-net \
-      -p 8080:8080 \
-      -e SPRING_DATASOURCE_URL=jdbc:postgresql://tasklist-db:5432/$POSTGRES_DB \
-      -e SPRING_DATASOURCE_USERNAME=$POSTGRES_USER \
-      -e SPRING_DATASOURCE_PASSWORD=$POSTGRES_PASSWORD \
-      $IMAGE_NAME
-
+      run: |
+        docker run -d \
+          --name tasklist-app \
+          --network tasklist-net \
+          -p 8080:8080 \
+          -e SPRING_DATASOURCE_URL=jdbc:postgresql://tasklist-db:5432/$POSTGRES_DB \
+          -e SPRING_DATASOURCE_USERNAME=$POSTGRES_USER \
+          -e SPRING_DATASOURCE_PASSWORD=$POSTGRES_PASSWORD \
+          $IMAGE_NAME
 
     - name: Wait for app
       run: |
         for i in {1..20}; do
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/actuator/health || echo "000")
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/tasks || echo "000")
           if [[ "$STATUS" == "200" ]]; then
             echo "App is up!"
             break
@@ -85,10 +84,7 @@ jobs:
           sleep 5
         done
 
-    - name: Run Smoke Test
+    - name: Smoke test
       run: |
-        if ! curl -f http://localhost:8080/actuator/health; then
-          echo "App not responding!"
-          docker logs tasklist-app
-          exit 1
-        fi
+        echo "Testing endpoint..."
+        curl -f http://localhost:8080/api/tasks || (docker logs tasklist-app && exit 1)

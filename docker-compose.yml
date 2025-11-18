@@ -10,10 +10,10 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - tasklist-data:/var/lib/postgresql/data
+      - taskdata:/var/lib/postgresql/data
 
   app:
-    build: .
+    image: tasklist-app:latest
     container_name: tasklist-app
     ports:
       - "8080:8080"
@@ -25,5 +25,4 @@ services:
       SPRING_DATASOURCE_PASSWORD: taskpass
 
 volumes:
-  tasklist-data:
-  driver: local
+  taskdata:
