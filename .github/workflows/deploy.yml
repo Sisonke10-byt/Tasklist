@@ -1,21 +1,22 @@
 name: CD - Deploy to VM
 
 on:
-  workflow_dispatch:
-  # optionally run after CI build is complete
-  # workflow_run:
-  #   workflows: ["CI - Build, Test & Run"]
-  #   types:
-  #     - completed
+  workflow_run:
+    workflows: ["CI - Build, Test & Run"]
+    types:
+      - completed
 
 jobs:
   deploy-vm:
     runs-on: ubuntu-latest
+
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
     steps:
       - uses: actions/checkout@v4
 
       - name: Start ssh-agent and add private key
-        uses: webfactory/ssh-agent@v0.8.1
+        uses: webfactory/ssh-agent@v0.9.1 
         with:
           ssh-private-key: ${{ secrets.ANSIBLE_SSH_PRIVATE_KEY }}
 
