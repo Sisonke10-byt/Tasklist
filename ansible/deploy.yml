@@ -1,4 +1,3 @@
-cat > ansible/deploy.yml <<'EOF'
 ---
 - name: Deploy Tasklist App on remote VM
   hosts: appservers
@@ -42,6 +41,8 @@ cat > ansible/deploy.yml <<'EOF'
           SPRING_DATASOURCE_URL: "jdbc:postgresql://{{ db_host }}:5432/{{ db_name }}"
           SPRING_DATASOURCE_USERNAME: "{{ db_user }}"
           SPRING_DATASOURCE_PASSWORD: "{{ db_pass }}"
-EOF
+
+
+
 
 
