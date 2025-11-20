@@ -51,3 +51,4 @@ jobs:
         run: |
           ansible-playbook -i ansible/inventory ansible/deploy.yml \
             --extra-vars "registry=${REGISTRY} image_name=${IMAGE_NAME} image_tag=${IMAGE_TAG}"
+
