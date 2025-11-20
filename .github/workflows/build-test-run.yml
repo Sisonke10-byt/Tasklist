@@ -1,4 +1,4 @@
-name: CI/CD Build, Test & Run
+name: CI - Build, Test & Run
 
 on:
   push:
