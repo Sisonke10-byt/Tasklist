@@ -11,12 +11,9 @@
     db_name: taskdb
     db_user: taskuser
     db_pass: taskpass
-  tasks:
-    - name: Ensure docker python package is available
-      ansible.builtin.pip:
-        name: docker
-        state: present
+    ansible_python_interpreter: /usr/bin/python3
 
+  tasks:
     - name: Pull the Docker image
       community.docker.docker_image:
         name: "{{ registry }}/{{ image_name }}"
