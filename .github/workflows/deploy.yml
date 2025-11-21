@@ -20,11 +20,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Install Python, Ansible, Docker SDK
-      - name: Install Python, Ansible, Docker SDK
+      # Setup Python virtual environment and install Ansible + Docker SDK
+      - name: Setup Python venv and install dependencies
         run: |
-          python3 -m pip install --upgrade pip --user
-          python3 -m pip install --user "ansible>=8.6,<9" docker
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install "ansible>=8.6,<9" docker
           ansible-galaxy collection install community.docker || true
 
       # Create static inventory with your VM private IP
@@ -40,5 +42,6 @@ jobs:
           REGISTRY: ${{ secrets.REGISTRY }}
           IMAGE_NAME: ${{ secrets.IMAGE_NAME }}
         run: |
+          source venv/bin/activate
           ansible-playbook -i ansible/inventory ansible/deploy.yml \
             --extra-vars "registry=${REGISTRY} image_name=${IMAGE_NAME}"
