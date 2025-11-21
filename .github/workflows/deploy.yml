@@ -6,44 +6,36 @@ on:
     workflows: ["CI - Build, Test & Run"]
     types:
       - completed
-
-  # Allow manual triggering for testing
-  workflow_dispatch:
+  workflow_dispatch:  # allows manual triggering
 
 jobs:
   deploy-vm:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
-    # Only run if CI succeeded
+    # Only run if CI workflow succeeded
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
-      # Checkout repository
-      - name: Checkout repo
+      # 1️⃣ Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      # Start ssh-agent and add private key
-      - name: Start ssh-agent and add private key
-        uses: webfactory/ssh-agent@v0.9.1
-        with:
-          ssh-private-key: ${{ secrets.ANSIBLE_SSH_PRIVATE_KEY }}
-
-      # Install Python, Ansible, Docker SDK
+      # 2️⃣ Install Python, Ansible, Docker SDK
       - name: Install Python, Ansible, Docker SDK
         run: |
           python -m pip install --upgrade pip --user
           python -m pip install --user "ansible>=8.6,<9" docker
           ansible-galaxy collection install community.docker || true
 
-      # Create dynamic inventory file
-      - name: Create dynamic inventory
+      # 3️⃣ Create static inventory with your VM private IP
+      - name: Create Ansible inventory
         run: |
           mkdir -p ansible
           echo "[appservers]" > ansible/inventory
-          echo "${{ secrets.ANSIBLE_HOST }} ansible_user=${{ secrets.ANSIBLE_SSH_USER }} ansible_port=${{ secrets.ANSIBLE_SSH_PORT }}" >> ansible/inventory
+          echo "172.19.19.10 ansible_user=sisonke ansible_ssh_private_key_file=/home/sisonke/.ssh/id_ed25519" >> ansible/inventory
 
-      # Run Ansible playbook
-      - name: Run Ansible playbook
+      # 4️⃣ Run Ansible playbook to deploy app
+      - name: Deploy Tasklist App via Ansible
         env:
           REGISTRY: ${{ secrets.REGISTRY }}
           IMAGE_NAME: ${{ secrets.IMAGE_NAME }}
