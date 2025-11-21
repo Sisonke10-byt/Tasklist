@@ -34,12 +34,11 @@ jobs:
           echo "[appservers]" > ansible/inventory
           echo "172.19.19.10 ansible_user=sisonke ansible_ssh_private_key_file=/home/sisonke/.ssh/id_ed25519" >> ansible/inventory
 
+      # Deploy Tasklist App via Ansible
       - name: Deploy Tasklist App via Ansible
         env:
           REGISTRY: ${{ secrets.REGISTRY }}
           IMAGE_NAME: ${{ secrets.IMAGE_NAME }}
-          IMAGE_TAG: ${{ secrets.IMAGE_TAG }}
         run: |
           ansible-playbook -i ansible/inventory ansible/deploy.yml \
-            --extra-vars "registry=${REGISTRY} image_name=${IMAGE_NAME} image_tag=${IMAGE_TAG}"
-
+            --extra-vars "registry=${REGISTRY} image_name=${IMAGE_NAME}"
