@@ -10,31 +10,31 @@ on:
 
 jobs:
   deploy-vm:
-    runs-on: self-hosted
+    runs-on: [self-hosted, Linux]
 
     # Only run if CI workflow succeeded
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
-      # 1️⃣ Checkout repository
+      # Checkout repository
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2️⃣ Install Python, Ansible, Docker SDK
+      # Install Python, Ansible, Docker SDK
       - name: Install Python, Ansible, Docker SDK
         run: |
           python -m pip install --upgrade pip --user
           python -m pip install --user "ansible>=8.6,<9" docker
           ansible-galaxy collection install community.docker || true
 
-      # 3️⃣ Create static inventory with your VM private IP
+      # Create static inventory with your VM private IP
       - name: Create Ansible inventory
         run: |
           mkdir -p ansible
           echo "[appservers]" > ansible/inventory
           echo "172.19.19.10 ansible_user=sisonke ansible_ssh_private_key_file=/home/sisonke/.ssh/id_ed25519" >> ansible/inventory
 
-      # 4️⃣ Run Ansible playbook to deploy app
+      # Run Ansible playbook to deploy app
       - name: Deploy Tasklist App via Ansible
         env:
           REGISTRY: ${{ secrets.REGISTRY }}
