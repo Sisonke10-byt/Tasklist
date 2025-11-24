@@ -1,7 +1,6 @@
 name: CD - Deploy to VM
 
 on:
-  # Trigger after CI workflow completes successfully
   workflow_run:
     workflows: ["CI - Build, Test & Run"]
     types:
@@ -12,32 +11,42 @@ jobs:
   deploy-vm:
     runs-on: [self-hosted, Linux]
 
-    # Only run if CI workflow succeeded
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # Only run if triggered manually OR CI succeeded
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success')
 
     steps:
-      # Checkout repository
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Python, Ansible, Docker SDK
+      - name: Set up Python environment + Install Ansible
         run: |
-          python3 -m pip install --upgrade pip --user
-          python3 -m pip install --user "ansible>=8.6,<9" docker
-          ansible-galaxy collection install community.docker || true
+          # Create and activate virtual environment
+          python3 -m venv venv
+          source venv/bin/activate
 
-      # Create static inventory with your VM private IP
+          # Upgrade pip inside venv
+          pip install --upgrade pip
+
+          # Install Ansible + Docker module
+          pip install "ansible>=8.6,<9" docker
+
+          # Install Galaxy collections inside venv
+          ansible-galaxy collection install community.docker
+
       - name: Create Ansible inventory
         run: |
           mkdir -p ansible
           echo "[appservers]" > ansible/inventory
           echo "172.19.19.10 ansible_user=sisonke ansible_ssh_private_key_file=/home/sisonke/.ssh/id_ed25519" >> ansible/inventory
 
-      # Deploy Tasklist App via Ansible
       - name: Deploy Tasklist App via Ansible
         env:
           REGISTRY: ${{ secrets.REGISTRY }}
           IMAGE_NAME: ${{ secrets.IMAGE_NAME }}
         run: |
+          source venv/bin/activate
           ansible-playbook -i ansible/inventory ansible/deploy.yml \
             --extra-vars "registry=${REGISTRY} image_name=${IMAGE_NAME}"
