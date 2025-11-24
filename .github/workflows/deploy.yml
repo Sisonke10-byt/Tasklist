@@ -23,11 +23,18 @@ jobs:
 
       - name: Set up Python environment + Install Ansible
         run: |
+          # Create and activate virtual environment
           python3 -m venv venv
           source venv/bin/activate
+
+          # Upgrade pip inside venv
           pip install --upgrade pip
+
+          # Install Ansible + Docker module
           pip install "ansible>=8.6,<9" docker
-          ansible-galaxy collection install community.docker || true
+
+          # Install Galaxy collections inside venv
+          ansible-galaxy collection install community.docker
 
       - name: Create Ansible inventory
         run: |
