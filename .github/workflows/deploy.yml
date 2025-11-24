@@ -50,3 +50,5 @@ jobs:
           source venv/bin/activate
           ansible-playbook -i ansible/inventory ansible/deploy.yml \
             --extra-vars "registry=${REGISTRY} image_name=${IMAGE_NAME}"
+
+
