@@ -1,5 +1,5 @@
 ---
-- name: Deploy Tasklist App on remote VM
+- name: Optimized Deployment for Tasklist App
   hosts: appservers
   become: yes
   vars:
@@ -7,30 +7,33 @@
     image_name: "{{ image_name }}"
     image_tag: "{{ image_tag | default('latest') }}"
     container_name: tasklist-app
+
     db_host: tasklist-db
     db_name: taskdb
     db_user: taskuser
     db_pass: taskpass
+
     ansible_python_interpreter: /usr/bin/python3
 
   tasks:
-    - name: Pull the Docker image
+    - name: Ensure latest Docker image is present
       community.docker.docker_image:
         name: "{{ registry }}/{{ image_name }}"
         tag: "{{ image_tag }}"
         source: pull
+      register: pulled_image
 
-    - name: Stop and remove current container
-      community.docker.docker_container:
+    - name: Check if container exists
+      community.docker.docker_container_info:
         name: "{{ container_name }}"
-        state: absent
-        force_kill: yes
+      register: container_info
 
-    - name: Run new container
+    - name: Restart container only if new image was pulled
       community.docker.docker_container:
         name: "{{ container_name }}"
         image: "{{ registry }}/{{ image_name }}:{{ image_tag }}"
         state: started
+        restart: "{{ pulled_image.changed }}"
         restart_policy: always
         published_ports:
           - "8080:8080"
@@ -38,4 +41,14 @@
           SPRING_DATASOURCE_URL: "jdbc:postgresql://{{ db_host }}:5432/{{ db_name }}"
           SPRING_DATASOURCE_USERNAME: "{{ db_user }}"
           SPRING_DATASOURCE_PASSWORD: "{{ db_pass }}"
+      register: container_run
 
+    - name: Wait for app to become healthy
+      uri:
+        url: "http://localhost:8080/actuator/health"
+        method: GET
+        status_code: 200
+      register: health_check
+      retries: 15
+      delay: 4
+      until: health_check.status == 200
