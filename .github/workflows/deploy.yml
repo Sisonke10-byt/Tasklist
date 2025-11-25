@@ -3,83 +3,61 @@ name: CD - Deploy to VM
 on:
   workflow_run:
     workflows: ["CI - Build, Test & Run"]
-    types:
-      - completed
+    types: [completed]
   workflow_dispatch:
 
 jobs:
   deploy-vm:
     runs-on: [self-hosted, Linux]
 
-    # Run only when CI succeeded OR manually triggered
     if: >
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'workflow_run' &&
        github.event.workflow_run.conclusion == 'success')
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # ==========================
-      #      CACHE DEPENDENCIES
-      # ==========================
-      - name: Cache Python venv
+      # Cache Python venv
+      - name: Cache venv
         id: cache-venv
         uses: actions/cache@v4
         with:
           path: venv
           key: venv-${{ runner.os }}-${{ hashFiles('ansible/requirements.txt') }}
 
-      - name: Create and activate venv (if missing)
-        if: steps.cache-venv.outputs.cache-hit != 'true'
+      - name: Install dependencies
         run: |
-          # Create and activate virtual environment
           python3 -m venv venv
-          source venv/bin/activate
+          ./venv/bin/pip install --upgrade pip
+          ./venv/bin/pip install -r ansible/requirements.txt
 
-          # Upgrade pip inside venv
-          pip install --upgrade pip
-
-          # Install Ansible + Docker module
-          pip install "ansible>=8.6,<9" docker
-
-      - name: Activate venv (cached)
-        if: steps.cache-venv.outputs.cache-hit == 'true'
-        run: |
-          source venv/bin/activate
-          pip --version
-
-      # Cache Ansible Galaxy
-      - name: Cache Ansible Galaxy
+      # Cache galaxy
+      - name: Cache Galaxy
         id: cache-galaxy
         uses: actions/cache@v4
         with:
           path: ~/.ansible/collections
-          key: galaxy-${{ runner.os }}-community-docker
+          key: galaxy-${{ runner.os }}-${{ hashFiles('ansible/collections.yml') }}
 
-      - name: Install Ansible Galaxy Collections
+      - name: Install Ansible Collections
         if: steps.cache-galaxy.outputs.cache-hit != 'true'
         run: |
-          source venv/bin/activate
-          ansible-galaxy collection install community.docker
+          ./venv/bin/ansible-galaxy install -r ansible/collections.yml
 
-      # ==========================
-      #       DEPLOY TO VM
-      # ==========================
-      - name: Create Inventory
+      # Inventory
+      - name: Create inventory file
         run: |
-          mkdir -p ansible
-          echo "[appservers]" > ansible/inventory
-          echo "172.19.19.10 ansible_user=sisonke ansible_ssh_private_key_file=/home/sisonke/.ssh/id_ed25519" >> ansible/inventory
+          echo "[appservers]" > inventory.ini
+          echo "172.19.19.10 ansible_user=sisonke ansible_ssh_private_key_file=/home/sisonke/.ssh/id_ed25519" >> inventory.ini
 
-      - name: Deploy Application
+      # Deploy
+      - name: Deploy App
         env:
           REGISTRY: ${{ secrets.REGISTRY }}
           IMAGE_NAME: ${{ secrets.IMAGE_NAME }}
           IMAGE_TAG: ${{ secrets.IMAGE_TAG }}
         run: |
-          source venv/bin/activate
-          ansible-playbook -i ansible/inventory ansible/deploy.yml \
+          ./venv/bin/ansible-playbook -i inventory.ini ansible/deploy.yml \
             --extra-vars "registry=${REGISTRY} image_name=${IMAGE_NAME} image_tag=${IMAGE_TAG}"
 
