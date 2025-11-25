@@ -16,48 +16,51 @@ jobs:
        github.event.workflow_run.conclusion == 'success')
 
     steps:
+      # ----------------------
+      # Checkout Code
+      # ----------------------
       - uses: actions/checkout@v4
 
-      # Cache Python venv
-      - name: Cache venv
-        id: cache-venv
-        uses: actions/cache@v4
+      # ----------------------
+      # Set up Python
+      # ----------------------
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          path: venv
-          key: venv-${{ runner.os }}-${{ hashFiles('ansible/requirements.txt') }}
+          python-version: 3.12
+          cache: 'pip'  # automatic pip caching
 
-      - name: Install dependencies
+      # ----------------------
+      # Install Dependencies
+      # ----------------------
+      - name: Install Ansible & Docker SDK
         run: |
-          python3 -m venv venv
-          ./venv/bin/pip install --upgrade pip
-          ./venv/bin/pip install -r ansible/requirements.txt
+          pip install --upgrade pip --no-input
+          pip install "ansible>=8.6,<9" docker --no-input
 
-      # Cache galaxy
-      - name: Cache Galaxy
-        id: cache-galaxy
-        uses: actions/cache@v4
-        with:
-          path: ~/.ansible/collections
-          key: galaxy-${{ runner.os }}-${{ hashFiles('ansible/collections.yml') }}
-
+      # ----------------------
+      # Install Ansible Galaxy Collections
+      # ----------------------
       - name: Install Ansible Collections
-        if: steps.cache-galaxy.outputs.cache-hit != 'true'
         run: |
-          ./venv/bin/ansible-galaxy install -r ansible/collections.yml
+          ansible-galaxy collection install community.docker --force
 
-      # Inventory
+      # ----------------------
+      # Create Inventory
+      # ----------------------
       - name: Create inventory file
         run: |
           echo "[appservers]" > inventory.ini
           echo "172.19.19.10 ansible_user=sisonke ansible_ssh_private_key_file=/home/sisonke/.ssh/id_ed25519" >> inventory.ini
 
-      # Deploy
+      # ----------------------
+      # Deploy Application
+      # ----------------------
       - name: Deploy App
         env:
           REGISTRY: ${{ secrets.REGISTRY }}
           IMAGE_NAME: ${{ secrets.IMAGE_NAME }}
           IMAGE_TAG: ${{ secrets.IMAGE_TAG }}
         run: |
-          ./venv/bin/ansible-playbook -i inventory.ini ansible/deploy.yml \
+          ansible-playbook -i inventory.ini ansible/deploy.yml \
             --extra-vars "registry=${REGISTRY} image_name=${IMAGE_NAME} image_tag=${IMAGE_TAG}"
-
