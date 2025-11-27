@@ -43,9 +43,9 @@
           SPRING_DATASOURCE_PASSWORD: "{{ db_pass }}"
       register: container_run
 
-    - name: Wait for app to become healthy
+    - name: Wait for app to become healthy (check /api/tasks)
       uri:
-        url: "http://localhost:8080/actuator/health"
+        url: "http://localhost:8080/api/tasks"
         method: GET
         status_code: 200
       register: health_check
