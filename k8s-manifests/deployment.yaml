@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tasklist-app
+  namespace: tasklist
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: tasklist-app
+  template:
+    metadata:
+      labels:
+        app: tasklist-app
+    spec:
+      containers:
+        - name: tasklist-app
+          image: docker.io/sisonke10/tasklist-app:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://tasklist-db:5432/taskdb
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: tasklist-db-secret
+                  key: SPRING_DATASOURCE_USERNAME
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: tasklist-db-secret
+                  key: SPRING_DATASOURCE_PASSWORD
