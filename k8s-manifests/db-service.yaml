@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: tasklist-db
+  namespace: tasklist
+spec:
+  selector:
+    app: tasklist-db
+  ports:
+    - port: 5432
+      targetPort: 5432
+  clusterIP: None
