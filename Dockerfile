@@ -8,5 +8,5 @@ COPY src ./src
 RUN ./mvnw clean package -DskipTests
 
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "target/tasklist-0.0.1-SNAPSHOT.jar"]
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]
 
